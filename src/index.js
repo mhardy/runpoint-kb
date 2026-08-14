@@ -1,148 +1,47 @@
-import { fetchApp, fetchArticles, fetchArticle } from "./fetch.js";
-import { brandingFromApp, renderIndexPage, renderArticlePage } from "./render.js";
-import { buildSearchIndex } from "./searchIndex.js";
+import { readdir, readFile, mkdir, writeFile } from "node:fs/promises";
+import { join, basename, extname } from "node:path";
+import matter from "gray-matter";
 
-const CACHE_TTL_SECONDS = 300;
-
-/**
- * @param {string} basePath
- */
-function normalizeBasePath(basePath) {
-  if (!basePath.startsWith("/")) {
-    return `/${basePath.replace(/\/$/, "")}`;
-  }
-  return basePath.replace(/\/$/, "") || "/";
-}
+import { renderArticlePage, renderIndexPage } from "./render.js";
 
 /**
- * @param {URL} url
- * @param {string} basePath
- * @returns {'index' | 'search-index' | { type: 'article', slug: string } | null}
+ * @param {string} sourceDir
+ * @param {string} outDir
  */
-function matchKbRoute(url, basePath) {
-  const base = normalizeBasePath(basePath);
-  const { pathname } = url;
+export async function generateSupportPages(sourceDir, outDir) {
+  const entries = await readdir(sourceDir, { withFileTypes: true });
+  const mdFiles = entries
+    .filter((entry) => entry.isFile() && extname(entry.name).toLowerCase() === ".md")
+    .map((entry) => entry.name);
 
-  if (pathname !== base && !pathname.startsWith(`${base}/`)) {
-    return null;
+  /** @type {{ slug: string, title: string, excerpt?: string, markdown: string }[]} */
+  const articles = [];
+
+  for (const filename of mdFiles) {
+    const filePath = join(sourceDir, filename);
+    const raw = await readFile(filePath, "utf8");
+    const { data, content } = matter(raw);
+    const fileSlug = basename(filename, extname(filename));
+    const slug =
+      typeof data.slug === "string" && data.slug.trim() ? data.slug.trim() : fileSlug;
+    const title =
+      typeof data.title === "string" && data.title.trim() ? data.title.trim() : fileSlug;
+    const excerpt = typeof data.excerpt === "string" ? data.excerpt : undefined;
+
+    articles.push({ slug, title, excerpt, markdown: content });
   }
 
-  const rest = pathname.slice(base.length) || "/";
-  if (rest === "/" || rest === "") {
-    return "index";
+  articles.sort((a, b) => a.title.localeCompare(b.title, "en", { sensitivity: "base" }));
+
+  await mkdir(outDir, { recursive: true });
+
+  for (const article of articles) {
+    const articleDir = join(outDir, article.slug);
+    await mkdir(articleDir, { recursive: true });
+    const html = renderArticlePage(article);
+    await writeFile(join(articleDir, "index.html"), html, "utf8");
   }
 
-  const segment = rest.slice(1);
-  if (segment === "search-index.json") {
-    return "search-index";
-  }
-
-  if (segment && !segment.includes("/")) {
-    return { type: "article", slug: decodeURIComponent(segment) };
-  }
-
-  return null;
+  const indexHtml = renderIndexPage(articles);
+  await writeFile(join(outDir, "index.html"), indexHtml, "utf8");
 }
-
-/**
- * @param {Response} response
- */
-function withCacheHeaders(response) {
-  const headers = new Headers(response.headers);
-  headers.set("Cache-Control", `public, max-age=${CACHE_TTL_SECONDS}`);
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
-  });
-}
-
-/**
- * @param {Request} request
- * @param {Response} response
- */
-async function cachePut(request, response) {
-  const cache = caches.default;
-  const cached = withCacheHeaders(response);
-  await cache.put(request, cached.clone());
-  return cached;
-}
-
-/**
- * @param {Request} request
- * @param {{ SUPABASE_URL: string, SUPABASE_ANON_KEY: string }} env
- * @param {{ appSlug: string, basePath?: string, siteNavHtml?: string, siteNavCssHref?: string, siteNavScript?: string }} options
- * @returns {Promise<Response | null>}
- */
-export async function handleKbRequest(request, env, options) {
-  const {
-    appSlug,
-    basePath = "/support",
-    siteNavHtml,
-    siteNavCssHref,
-    siteNavScript,
-  } = options;
-  const chrome = { siteNavHtml, siteNavCssHref, siteNavScript };
-  const url = new URL(request.url);
-  const route = matchKbRoute(url, basePath);
-
-  if (!route) {
-    return null;
-  }
-
-  const cache = caches.default;
-  const cached = await cache.match(request);
-  if (cached) {
-    return cached;
-  }
-
-  const app = await fetchApp(appSlug, env);
-  if (!app) {
-    return new Response("Not Found", { status: 404 });
-  }
-
-  const branding = brandingFromApp(app, normalizeBasePath(basePath));
-  const kbBase = normalizeBasePath(basePath);
-
-  if (route === "index") {
-    const articles = await fetchArticles(appSlug, env);
-    const html = renderIndexPage(articles, branding, kbBase, chrome);
-    return cachePut(
-      request,
-      new Response(html, {
-        headers: { "Content-Type": "text/html; charset=utf-8" },
-      }),
-    );
-  }
-
-  if (route === "search-index") {
-    const articles = await fetchArticles(appSlug, env);
-    const index = buildSearchIndex(articles);
-    return cachePut(
-      request,
-      new Response(JSON.stringify(index), {
-        headers: { "Content-Type": "application/json; charset=utf-8" },
-      }),
-    );
-  }
-
-  if (route.type === "article") {
-    const article = await fetchArticle(appSlug, route.slug, env);
-    if (!article) {
-      return new Response("Not Found", { status: 404 });
-    }
-    const html = renderArticlePage(article, branding, kbBase, chrome);
-    return cachePut(
-      request,
-      new Response(html, {
-        headers: { "Content-Type": "text/html; charset=utf-8" },
-      }),
-    );
-  }
-
-  return null;
-}
-
-export { fetchApp, fetchArticles, fetchArticle } from "./fetch.js";
-export { brandingFromApp, renderIndexPage, renderArticlePage } from "./render.js";
-export { buildSearchIndex, searchWidgetScript } from "./searchIndex.js";

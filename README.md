@@ -1,38 +1,42 @@
-# runpoint-kb
+# @runpoint/kb
 
-Shared package that renders published knowledge-base articles as HTML at request time inside a Cloudflare Worker. Consumed by site repos as a local `file:` dependency — no npm publish, no build step.
+Generate static support pages from markdown. Pure file-in, file-out — no network calls, no caching.
 
 ## Usage
 
 ```javascript
-import { handleKbRequest } from "runpoint-kb";
+import { generateSupportPages } from "@runpoint/kb";
 
-export default {
-  async fetch(request, env) {
-    const kb = await handleKbRequest(request, env, {
-      appSlug: "rouzz",
-      basePath: "/support",
-    });
-    if (kb) return kb;
-
-    return env.ASSETS.fetch(request);
-  },
-};
+await generateSupportPages("./content/support", "./public/support");
 ```
 
-Set `SUPABASE_URL` and `SUPABASE_ANON_KEY` in the consumer's `wrangler.jsonc` `vars` (public anon key; RLS protects data).
+Each `.md` file in `sourceDir` becomes `outDir/<slug>/index.html`. An index listing all articles (alphabetically by title) is written to `outDir/index.html`.
 
-## Routes
+### Frontmatter
 
-Under `basePath` (default `/support`):
+```yaml
+---
+title: Required display title
+excerpt: Optional short summary for the index page
+slug: optional-url-slug   # defaults to filename without extension
+---
+```
 
-| Path | Response |
-|------|----------|
-| `/support` | Article index (HTML) |
-| `/support/{slug}` | Single article (HTML) |
-| `/support/search-index.json` | Search index (JSON) |
+## CLI
 
-Returns `null` for non-KB paths so the caller can fall through to other routing.
+```bash
+npx @runpoint/kb ./content/support ./public/support
+```
+
+Or from a consumer's `package.json` build script:
+
+```json
+{
+  "scripts": {
+    "build:support": "kb ./content/support ./public/support"
+  }
+}
+```
 
 ## Local test
 
@@ -40,12 +44,3 @@ Returns `null` for non-KB paths so the caller can fall through to other routing.
 npm install
 node test/check.mjs
 ```
-
-Reads credentials from `.env` and verifies fetch, render, and Cache API behavior against the live Supabase project.
-
-## Exports
-
-- `handleKbRequest` — main Worker entry
-- `fetchApp`, `fetchArticles`, `fetchArticle` — Supabase REST helpers
-- `renderIndexPage`, `renderArticlePage`, `brandingFromApp` — HTML rendering
-- `buildSearchIndex`, `searchWidgetScript` — client-side Fuse.js search

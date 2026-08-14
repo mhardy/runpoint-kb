@@ -1,16 +1,17 @@
 {
-  "name": "runpoint-kb",
-  "version": "0.1.0",
-  "description": "Render published KB articles as HTML at request time in Cloudflare Workers",
+  "name": "@runpoint/kb",
+  "version": "0.2.0",
+  "description": "Generate static support pages from markdown",
   "type": "module",
   "main": "./src/index.js",
   "exports": {
-    ".": "./src/index.js",
-    "./fetch": "./src/fetch.js",
-    "./render": "./src/render.js",
-    "./searchIndex": "./src/searchIndex.js"
+    ".": "./src/index.js"
+  },
+  "bin": {
+    "kb": "./bin/generate.mjs"
   },
   "dependencies": {
+    "gray-matter": "^4.0.3",
     "marked": "^15.0.12"
   }
 }
