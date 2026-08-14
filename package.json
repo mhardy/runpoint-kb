@@ -1,0 +1,16 @@
+{
+  "name": "runpoint-kb",
+  "version": "0.1.0",
+  "description": "Render published KB articles as HTML at request time in Cloudflare Workers",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./fetch": "./src/fetch.js",
+    "./render": "./src/render.js",
+    "./searchIndex": "./src/searchIndex.js"
+  },
+  "dependencies": {
+    "marked": "^15.0.12"
+  }
+}
