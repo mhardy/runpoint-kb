@@ -65,7 +65,7 @@ function pageShell({ title, branding, bodyHtml, basePath, siteNavHtml, siteNavCs
 
   const headerBlock = siteNavHtml ?? defaultHeader;
   const kbStyles = siteNavHtml
-    ? getSiteNavKbStyles()
+    ? getSiteNavKbStyles({ primaryText, secondaryText, accentColor })
     : getDefaultKbStyles({ accentColor, background, primaryText, secondaryText });
 
   return `<!DOCTYPE html>
@@ -138,15 +138,18 @@ function getDefaultKbStyles({ accentColor, background, primaryText, secondaryTex
     ${getSharedKbContentStyles("var(--text)", "var(--muted)", "var(--accent)")}`;
 }
 
-function getSiteNavKbStyles() {
+function getSiteNavKbStyles({ primaryText, secondaryText, accentColor }) {
+  const text = escapeHtml(primaryText);
+  const muted = escapeHtml(secondaryText);
+  const accent = escapeHtml(accentColor);
   return `
     main {
       max-width: 44rem;
       margin: 0 auto;
       padding: 1.25rem 1.5rem;
     }
-    a { color: var(--alarm); }
-    ${getSharedKbContentStyles("var(--ink)", "var(--muted)", "var(--alarm)")}`;
+    main .prose a { color: ${accent}; }
+    ${getSharedKbContentStyles(text, muted, accent)}`;
 }
 
 function getSharedKbContentStyles(textVar, mutedVar, accentVar) {
