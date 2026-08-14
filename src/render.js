@@ -117,6 +117,10 @@ function getPageStyles() {
     }`;
 }
 
+function supportContactHtml() {
+  return `<p class="support-contact">Still need help? Contact us in the app: Settings → Support &amp; Feedback.</p>`;
+}
+
 /**
  * @param {{ slug: string, title: string, excerpt?: string }[]} articles
  * @param {{ siteNavHtml?: string, siteNavCssHref?: string, siteNavScript?: string }} [options]
@@ -135,7 +139,8 @@ export function renderIndexPage(articles, options = {}) {
     <h1>Help Center</h1>
     <ul class="article-list">
       ${listItems || "<li>No articles yet.</li>"}
-    </ul>`;
+    </ul>
+    ${supportContactHtml()}`;
 
   return pageShell({
     title: "Help Center",
@@ -159,7 +164,7 @@ export function renderArticlePage(article, options = {}) {
       ${htmlBody}
     </article>
     <p class="back-link"><a href="../">← All articles</a></p>
-    <p class="support-contact">Still need help? Contact us in the app: Settings → Support &amp; Feedback.</p>`;
+    ${supportContactHtml()}`;
 
   return pageShell({
     title: article.title,

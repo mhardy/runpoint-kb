@@ -74,6 +74,10 @@ const checks = [
   indexHtml.includes('href="beta/">Beta Feature'),
   indexHtml.includes('href="getting-started/">Getting Started'),
   indexHtml.indexOf("Beta Feature") < indexHtml.indexOf("Getting Started"),
+  indexHtml.includes(
+    "Still need help? Contact us in the app: Settings → Support &amp; Feedback.",
+  ),
+  indexHtml.indexOf("</ul>") < indexHtml.indexOf("Still need help?"),
   articleHtml.includes("<h1>Getting Started</h1>"),
   articleHtml.includes("<h1>Welcome</h1>"),
   slugHtml.includes("<h1>Beta Feature</h1>"),
@@ -85,6 +89,9 @@ const checks = [
     "Still need help? Contact us in the app: Settings → Support &amp; Feedback.",
   ),
   navArticleHtml.includes(
+    "Still need help? Contact us in the app: Settings → Support &amp; Feedback.",
+  ),
+  navIndexHtml.includes(
     "Still need help? Contact us in the app: Settings → Support &amp; Feedback.",
   ),
   navIndexHtml.includes('<nav id="site-nav">Site Nav</nav>'),
