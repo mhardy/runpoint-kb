@@ -7,8 +7,9 @@ import { renderArticlePage, renderIndexPage } from "./render.js";
 /**
  * @param {string} sourceDir
  * @param {string} outDir
+ * @param {{ siteNavHtml?: string, siteNavCssHref?: string, siteNavScript?: string }} [options]
  */
-export async function generateSupportPages(sourceDir, outDir) {
+export async function generateSupportPages(sourceDir, outDir, options = {}) {
   const entries = await readdir(sourceDir, { withFileTypes: true });
   const mdFiles = entries
     .filter((entry) => entry.isFile() && extname(entry.name).toLowerCase() === ".md")
@@ -38,10 +39,10 @@ export async function generateSupportPages(sourceDir, outDir) {
   for (const article of articles) {
     const articleDir = join(outDir, article.slug);
     await mkdir(articleDir, { recursive: true });
-    const html = renderArticlePage(article);
+    const html = renderArticlePage(article, options);
     await writeFile(join(articleDir, "index.html"), html, "utf8");
   }
 
-  const indexHtml = renderIndexPage(articles);
+  const indexHtml = renderIndexPage(articles, options);
   await writeFile(join(outDir, "index.html"), indexHtml, "utf8");
 }

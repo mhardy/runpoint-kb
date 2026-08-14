@@ -7,8 +7,14 @@ Generate static support pages from markdown. Pure file-in, file-out — no netwo
 ```javascript
 import { generateSupportPages } from "@runpoint/kb";
 
-await generateSupportPages("./content/support", "./public/support");
+await generateSupportPages("./content/support", "./public/support", {
+  siteNavHtml: '<nav class="site-nav">…</nav>',
+  siteNavCssHref: "/assets/site-nav.css",
+  siteNavScript: 'document.querySelector(".site-nav").classList.add("ready");',
+});
 ```
+
+All three options are optional. When omitted, generated pages are unchanged.
 
 Each `.md` file in `sourceDir` becomes `outDir/<slug>/index.html`. An index listing all articles (alphabetically by title) is written to `outDir/index.html`.
 

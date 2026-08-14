@@ -10,19 +10,25 @@ function escapeHtml(value) {
     .replace(/"/g, "&quot;");
 }
 
-function pageShell({ title, bodyHtml }) {
+function pageShell({ title, bodyHtml, siteNavHtml, siteNavCssHref, siteNavScript }) {
+  const cssLink = siteNavCssHref
+    ? `\n  <link rel="stylesheet" href="${escapeHtml(siteNavCssHref)}">`
+    : "";
+  const navBlock = siteNavHtml ? `${siteNavHtml}\n` : "";
+  const scriptBlock = siteNavScript ? `\n  <script>${siteNavScript}</script>` : "";
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${escapeHtml(title)}</title>
-  <style>${getPageStyles()}</style>
+  <style>${getPageStyles()}</style>${cssLink}
 </head>
 <body>
-  <main>
+${navBlock}  <main>
     ${bodyHtml}
-  </main>
+  </main>${scriptBlock}
 </body>
 </html>`;
 }
@@ -113,8 +119,9 @@ function getPageStyles() {
 
 /**
  * @param {{ slug: string, title: string, excerpt?: string }[]} articles
+ * @param {{ siteNavHtml?: string, siteNavCssHref?: string, siteNavScript?: string }} [options]
  */
-export function renderIndexPage(articles) {
+export function renderIndexPage(articles, options = {}) {
   const listItems = articles
     .map((article) => {
       const excerpt = article.excerpt
@@ -130,13 +137,20 @@ export function renderIndexPage(articles) {
       ${listItems || "<li>No articles yet.</li>"}
     </ul>`;
 
-  return pageShell({ title: "Help Center", bodyHtml });
+  return pageShell({
+    title: "Help Center",
+    bodyHtml,
+    siteNavHtml: options.siteNavHtml,
+    siteNavCssHref: options.siteNavCssHref,
+    siteNavScript: options.siteNavScript,
+  });
 }
 
 /**
  * @param {{ slug: string, title: string, markdown: string }} article
+ * @param {{ siteNavHtml?: string, siteNavCssHref?: string, siteNavScript?: string }} [options]
  */
-export function renderArticlePage(article) {
+export function renderArticlePage(article, options = {}) {
   const htmlBody = marked.parse(article.markdown ?? "");
 
   const bodyHtml = `
@@ -146,5 +160,11 @@ export function renderArticlePage(article) {
     </article>
     <p class="back-link"><a href="../">← All articles</a></p>`;
 
-  return pageShell({ title: article.title, bodyHtml });
+  return pageShell({
+    title: article.title,
+    bodyHtml,
+    siteNavHtml: options.siteNavHtml,
+    siteNavCssHref: options.siteNavCssHref,
+    siteNavScript: options.siteNavScript,
+  });
 }
