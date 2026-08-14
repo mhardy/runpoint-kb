@@ -1,48 +1,26 @@
-### Use this prompt in any new site that will use the kb articles.
-----
-
+### Use this prompt to add KB support pages to any site repo.
+---
 
 ## Fill in before running
 
-APP_SLUG = (this app's KB slug, as created in `/app/kb` on `admin.rpoint.com` — the only thing that changes per site)
-
-
-KB_PACKAGE_REPO = mhardy/runpoint-kb
-SUPABASE_URL = (Runpoint shared Supabase project URL — copy from any existing site’s `wrangler.jsonc`)
-SUPABASE_ANON_KEY = (Runpoint shared publishable anon key — copy from any existing site’s `wrangler.jsonc`)
+- `SOURCE_DIR` = path to this site's markdown article files, wherever they already live (e.g. `content/support`, `kb` — check what's actually in this repo)
+- `OUT_DIR` = where generated HTML should land, e.g. `support` — **must** be inside this repo's `wrangler.jsonc` `assets.directory`, or Cloudflare won't deploy it
+- Decide: does this site need its KB pages to match the main site's nav? (Y/N)
 
 ---
 
-You are working in a site repo for one of Runpoint's apps. These sites run as Cloudflare Workers with static assets (not Cloudflare Pages) — look for `wrangler.jsonc`/`wrangler.toml` (`assets.directory` + `run_worker_first: true`) and a `worker.js` entry point, deployed via `wrangler deploy`. Before changing anything, read the existing `worker.js` and `wrangler.jsonc` in full to understand what this site already does — some sites route a `support.<domain>` subdomain through the worker for a contact form, some may have no support-related routing at all yet, and the exact structure varies per site. Do not assume a specific existing pattern; adapt to whatever this repo actually has.
+You are working in a site repo for one of Runpoint's apps. These sites run as Cloudflare Workers with static assets — look for `wrangler.jsonc`/`wrangler.toml` (`assets.directory` + `run_worker_first: true`) and a `worker.js` entry point. Cloudflare is git-connected and auto-deploys on push, running a configurable **Build command** before `wrangler deploy` — that's where this fits in.
 
-Your task: wire in the `@runpoint/kb` package — a shared package hosted at `KB_PACKAGE_REPO` on GitHub — so that KB articles for this app render at `/support/*`.
+If `worker.js` or `wrangler.jsonc` already reference `@runpoint/kb`, `handleKbRequest`, `SUPABASE_URL`, or `SUPABASE_ANON_KEY` — remove all of it. That was an earlier, abandoned design where the package fetched from a database and rendered per-request. The current `@runpoint/kb` only generates static files at build time; it has no request-time code path and needs no Worker wiring at all.
 
-Add `@runpoint/kb` as a dependency in `package.json`, referencing the GitHub repo: `"@runpoint/kb": "github:KB_PACKAGE_REPO"`.
+Add `@runpoint/kb` as a dependency: `"@runpoint/kb": "github:mhardy/runpoint-kb"`.
 
-In `worker.js`, import `handleKbRequest` from `@runpoint/kb`. Before the final static-assets fallback (`env.ASSETS.fetch(request)`), call `handleKbRequest(request, env, { appSlug: 'APP_SLUG' })` for requests whose path starts with `/support/` (article pages, the listing page, the search-index route), or — only if this site already has a `support.<domain>` subdomain routed through the worker — for that host with a non-root path too. If it returns a `Response`, return that; if it returns `null`, fall through exactly as the existing code does now. This must be purely additive: do not change or remove any of the site's existing routes, handlers, or behavior (contact forms, API routes, existing static pages, etc.) — if this site already serves something at `/support` (e.g. a hand-written page), ask how to reconcile that before overwriting it rather than assuming it should be replaced.
+**If nav-matching is not needed:** add a `build` script to `package.json`: `"build": "kb SOURCE_DIR OUT_DIR"`.
 
-Add `SUPABASE_URL` and `SUPABASE_ANON_KEY` (values above) to `wrangler.jsonc`'s `vars`, hardcoded (plain vars, not `wrangler secret` — the anon key is meant to be public, RLS is what protects the data, and it's fine to commit). Same project, same values, every site.
+**If nav-matching is needed:** extract the site's existing nav into `public/site-nav.css` (styles) and `site-nav.js` (exporting `siteNavHtml`, `siteNavCssHref`, `siteNavScript` strings — adjust in-page hash links to `/#section` so they work from `/OUT_DIR/*`), and link `site-nav.css` from the homepage too so it stays in sync. Then write a small local build script (e.g. `scripts/build-support.mjs`) that imports `generateSupportPages` and `siteNavHtml`/`siteNavCssHref`/`siteNavScript`, calls `generateSupportPages(SOURCE_DIR, OUT_DIR, { siteNavHtml, siteNavCssHref, siteNavScript })`, and set `package.json`'s `build` script to run it (the plain `kb` CLI can't pass nav options — only the JS API can).
 
-Add a **Support** link to the site's main navigation (and footer too, if the site has footer links) pointing to `/support/`. Match the existing nav markup and styling — do not redesign the header; just add the link in the same pattern as the other nav items. Skip only if a Support/Help link to `/support/` already exists.
+Add a **Support** nav link to `/OUT_DIR/` in the site's header (and footer, if it has footer links), matching existing markup/styling. Skip if one already exists.
 
-Make the KB pages use the **exact same nav** as the main site:
+**Manual step — cannot be automated in code:** in the Cloudflare dashboard, go to this Worker's **Settings → Build** and set the **Build command** to `npm run build` (Cloudflare does not honor build config from `wrangler.jsonc`/`wrangler.toml` — this has to be set per-project in the dashboard, once). Add a line to this repo's own `README.md` documenting that this step was done and must be redone if the project is ever recreated.
 
-1. Extract the site's nav markup and styles into shared files — typically `public/site-nav.css` (fonts, CSS variables, `.nav`, `.btn`, etc.) and a root `site-nav.js` that exports:
-   - `siteNavHtml` — the same `<nav>` HTML as the homepage (adjust in-page hash links to `/#section` so they work from `/support/*`)
-   - `siteNavCssHref` — usually `"/site-nav.css"`
-   - `siteNavScript` — any nav behavior the main page uses (e.g. sticky scroll class)
-2. Link `site-nav.css` from the homepage too, so nav stays in sync.
-3. Pass all three into `handleKbRequest`:
-
-```javascript
-import { siteNavCssHref, siteNavHtml, siteNavScript } from "./site-nav.js";
-
-const kb = await handleKbRequest(request, env, {
-  appSlug: "APP_SLUG",
-  siteNavHtml,
-  siteNavCssHref,
-  siteNavScript,
-});
-```
-
-**Check:** run `wrangler dev` locally and hit `/support/` and `/support/<an-existing-published-article-slug>` — confirm a real published article for `APP_SLUG` renders as real HTML (check view-source, not just what the browser shows), with correct branding, the same nav as the homepage, and that every pre-existing route on this site still works unchanged. Then deploy (`npm run deploy` or equivalent) and confirm the same thing live. Publishing an edit to the article from `/app/kb` should show up on the live site within a few minutes without a redeploy.
+**Check:** run the build script locally, then `wrangler dev` — confirm `/OUT_DIR/` and `/OUT_DIR/<a-real-article-slug>` render real HTML (view-source, not just what the browser shows) with nav matching if applicable, and every pre-existing route still works. Push to trigger the real Cloudflare build; check the **Builds** tab on that Worker to confirm the build command ran, then verify live.
