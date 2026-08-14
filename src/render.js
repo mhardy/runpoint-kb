@@ -114,11 +114,22 @@ function getPageStyles() {
     .back-link {
       margin-top: 2rem;
       font-size: 0.875rem;
+    }
+    .contact-callout {
+      margin-top: 2rem;
+      padding: 1rem 1.125rem;
+      border-radius: 0.75rem;
+      background: color-mix(in srgb, var(--accent) 8%, transparent);
+    }
+    .contact-callout p {
+      margin: 0;
+      font-size: 0.9375rem;
+      color: var(--muted);
     }`;
 }
 
 function supportContactHtml() {
-  return `<p class="support-contact">Still need help? Contact us in the app: Settings → Support &amp; Feedback.</p>`;
+  return `<div class="contact-callout"><p class="support-contact">Still need help? Contact us in the app: Settings → Support &amp; Feedback.</p></div>`;
 }
 
 /**
