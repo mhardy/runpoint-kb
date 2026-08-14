@@ -71,11 +71,18 @@ async function cachePut(request, response) {
 /**
  * @param {Request} request
  * @param {{ SUPABASE_URL: string, SUPABASE_ANON_KEY: string }} env
- * @param {{ appSlug: string, basePath?: string }} options
+ * @param {{ appSlug: string, basePath?: string, siteNavHtml?: string, siteNavCssHref?: string, siteNavScript?: string }} options
  * @returns {Promise<Response | null>}
  */
 export async function handleKbRequest(request, env, options) {
-  const { appSlug, basePath = "/support" } = options;
+  const {
+    appSlug,
+    basePath = "/support",
+    siteNavHtml,
+    siteNavCssHref,
+    siteNavScript,
+  } = options;
+  const chrome = { siteNavHtml, siteNavCssHref, siteNavScript };
   const url = new URL(request.url);
   const route = matchKbRoute(url, basePath);
 
@@ -99,7 +106,7 @@ export async function handleKbRequest(request, env, options) {
 
   if (route === "index") {
     const articles = await fetchArticles(appSlug, env);
-    const html = renderIndexPage(articles, branding, kbBase);
+    const html = renderIndexPage(articles, branding, kbBase, chrome);
     return cachePut(
       request,
       new Response(html, {
@@ -124,7 +131,7 @@ export async function handleKbRequest(request, env, options) {
     if (!article) {
       return new Response("Not Found", { status: 404 });
     }
-    const html = renderArticlePage(article, branding, kbBase);
+    const html = renderArticlePage(article, branding, kbBase, chrome);
     return cachePut(
       request,
       new Response(html, {

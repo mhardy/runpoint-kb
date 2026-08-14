@@ -38,19 +38,35 @@ function escapeHtml(value) {
     .replace(/"/g, "&quot;");
 }
 
-function pageShell({ title, branding, bodyHtml, basePath }) {
+/**
+ * @param {{ title: string, branding: ReturnType<typeof brandingFromApp>, bodyHtml: string, basePath: string, siteNavHtml?: string, siteNavCssHref?: string, siteNavScript?: string }} params
+ */
+function pageShell({ title, branding, bodyHtml, basePath, siteNavHtml, siteNavCssHref, siteNavScript }) {
   const { appName, accentColor, logoUrl, backToAppUrl, faviconUrl, background, primaryText, secondaryText } =
     branding;
 
   const favicon = faviconUrl
     ? `<link rel="icon" href="${escapeHtml(faviconUrl)}">`
     : "";
-  const logo = logoUrl
-    ? `<img class="logo" src="${escapeHtml(logoUrl)}" alt="${escapeHtml(appName)}" width="40" height="40">`
+  const siteNavLink = siteNavCssHref
+    ? `<link rel="stylesheet" href="${escapeHtml(siteNavCssHref)}">`
     : "";
-  const backLink = backToAppUrl
-    ? `<a class="back-link" href="${escapeHtml(backToAppUrl)}">← Back to ${escapeHtml(appName)}</a>`
-    : "";
+  const navScript = siteNavScript ? `<script>${siteNavScript}</script>` : "";
+
+  const defaultHeader = `<header class="site-header">
+    <div class="site-header-inner">
+      <div class="brand-row">
+        ${logoUrl ? `<img class="logo" src="${escapeHtml(logoUrl)}" alt="${escapeHtml(appName)}" width="40" height="40">` : ""}
+        <h1 class="brand-title"><a href="${escapeHtml(basePath)}">${escapeHtml(appName)} Help</a></h1>
+      </div>
+      ${backToAppUrl ? `<a class="back-link" href="${escapeHtml(backToAppUrl)}">← Back to ${escapeHtml(appName)}</a>` : ""}
+    </div>
+  </header>`;
+
+  const headerBlock = siteNavHtml ?? defaultHeader;
+  const kbStyles = siteNavHtml
+    ? getSiteNavKbStyles()
+    : getDefaultKbStyles({ accentColor, background, primaryText, secondaryText });
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -59,7 +75,21 @@ function pageShell({ title, branding, bodyHtml, basePath }) {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${escapeHtml(title)} · ${escapeHtml(appName)} Help</title>
   ${favicon}
-  <style>
+  ${siteNavLink}
+  <style>${kbStyles}</style>
+</head>
+<body>
+  ${headerBlock}
+  <main>
+    ${bodyHtml}
+  </main>
+  ${navScript}
+</body>
+</html>`;
+}
+
+function getDefaultKbStyles({ accentColor, background, primaryText, secondaryText }) {
+  return `
     :root {
       --accent: ${escapeHtml(accentColor)};
       --bg: ${escapeHtml(background)};
@@ -105,11 +135,27 @@ function pageShell({ title, branding, bodyHtml, basePath }) {
       color: var(--muted);
     }
     .back-link:hover { color: var(--accent); }
+    ${getSharedKbContentStyles("var(--text)", "var(--muted)", "var(--accent)")}`;
+}
+
+function getSiteNavKbStyles() {
+  return `
+    main {
+      max-width: 44rem;
+      margin: 0 auto;
+      padding: 1.25rem 1.5rem;
+    }
+    a { color: var(--alarm); }
+    ${getSharedKbContentStyles("var(--ink)", "var(--muted)", "var(--alarm)")}`;
+}
+
+function getSharedKbContentStyles(textVar, mutedVar, accentVar) {
+  return `
     .search-wrap { margin: 1.5rem 0 0.5rem; }
     .search-input {
       width: 100%;
       padding: 0.625rem 0.875rem;
-      border: 1px solid color-mix(in srgb, var(--muted) 30%, transparent);
+      border: 1px solid color-mix(in srgb, ${mutedVar} 30%, transparent);
       border-radius: 0.5rem;
       font: inherit;
       background: white;
@@ -120,11 +166,11 @@ function pageShell({ title, branding, bodyHtml, basePath }) {
       padding: 0;
     }
     .search-results li { margin: 0.375rem 0; }
-    .search-results a { text-decoration: none; font-weight: 500; }
+    .search-results a { text-decoration: none; font-weight: 500; color: ${accentVar}; }
     .search-results p {
       margin: 0.125rem 0 0;
       font-size: 0.875rem;
-      color: var(--muted);
+      color: ${mutedVar};
     }
     .article-list {
       list-style: none;
@@ -132,20 +178,20 @@ function pageShell({ title, branding, bodyHtml, basePath }) {
       padding: 0;
     }
     .article-list li {
-      border-bottom: 1px solid color-mix(in srgb, var(--muted) 20%, transparent);
+      border-bottom: 1px solid color-mix(in srgb, ${mutedVar} 20%, transparent);
       padding: 0.875rem 0;
     }
     .article-list a {
       font-size: 1.0625rem;
       font-weight: 600;
       text-decoration: none;
-      color: var(--text);
+      color: ${textVar};
     }
-    .article-list a:hover { color: var(--accent); }
+    .article-list a:hover { color: ${accentVar}; }
     .article-list p {
       margin: 0.25rem 0 0;
       font-size: 0.9375rem;
-      color: var(--muted);
+      color: ${mutedVar};
     }
     .prose h1, .prose h2, .prose h3, .prose h4 {
       line-height: 1.25;
@@ -163,15 +209,15 @@ function pageShell({ title, branding, bodyHtml, basePath }) {
       font-size: 0.9375rem;
     }
     .prose th, .prose td {
-      border: 1px solid color-mix(in srgb, var(--muted) 25%, transparent);
+      border: 1px solid color-mix(in srgb, ${mutedVar} 25%, transparent);
       padding: 0.5rem 0.625rem;
       text-align: left;
     }
-    .prose th { background: color-mix(in srgb, var(--muted) 8%, transparent); }
+    .prose th { background: color-mix(in srgb, ${mutedVar} 8%, transparent); }
     .prose code {
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
       font-size: 0.875em;
-      background: color-mix(in srgb, var(--muted) 10%, transparent);
+      background: color-mix(in srgb, ${mutedVar} 10%, transparent);
       padding: 0.125rem 0.375rem;
       border-radius: 0.25rem;
     }
@@ -179,41 +225,26 @@ function pageShell({ title, branding, bodyHtml, basePath }) {
       overflow-x: auto;
       padding: 0.875rem 1rem;
       border-radius: 0.5rem;
-      background: color-mix(in srgb, var(--muted) 10%, transparent);
+      background: color-mix(in srgb, ${mutedVar} 10%, transparent);
     }
     .prose pre code { background: none; padding: 0; }
     .article-meta {
       margin-top: 2rem;
       padding-top: 1rem;
-      border-top: 1px solid color-mix(in srgb, var(--muted) 20%, transparent);
+      border-top: 1px solid color-mix(in srgb, ${mutedVar} 20%, transparent);
       font-size: 0.875rem;
-      color: var(--muted);
+      color: ${mutedVar};
     }
-  </style>
-</head>
-<body>
-  <header class="site-header">
-    <div class="site-header-inner">
-      <div class="brand-row">
-        ${logo}
-        <h1 class="brand-title"><a href="${escapeHtml(basePath)}">${escapeHtml(appName)} Help</a></h1>
-      </div>
-      ${backLink}
-    </div>
-  </header>
-  <main>
-    ${bodyHtml}
-  </main>
-</body>
-</html>`;
+    .article-meta a { color: ${accentVar}; }`;
 }
 
 /**
  * @param {object[]} articles
  * @param {ReturnType<typeof brandingFromApp>} branding
  * @param {string} basePath
+ * @param {{ siteNavHtml?: string, siteNavCssHref?: string, siteNavScript?: string }} [chrome]
  */
-export function renderIndexPage(articles, branding, basePath) {
+export function renderIndexPage(articles, branding, basePath, chrome = {}) {
   const listItems = articles
     .map((article) => {
       const excerpt = article.excerpt
@@ -235,6 +266,7 @@ export function renderIndexPage(articles, branding, basePath) {
     branding,
     bodyHtml,
     basePath,
+    ...chrome,
   });
 }
 
@@ -242,8 +274,9 @@ export function renderIndexPage(articles, branding, basePath) {
  * @param {object} article
  * @param {ReturnType<typeof brandingFromApp>} branding
  * @param {string} basePath
+ * @param {{ siteNavHtml?: string, siteNavCssHref?: string, siteNavScript?: string }} [chrome]
  */
-export function renderArticlePage(article, branding, basePath) {
+export function renderArticlePage(article, branding, basePath, chrome = {}) {
   const htmlBody = marked.parse(article.body_markdown ?? "");
   const updated = article.updated_at
     ? `<p class="article-meta">Last updated ${escapeHtml(new Date(article.updated_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }))}</p>`
@@ -262,6 +295,7 @@ export function renderArticlePage(article, branding, basePath) {
     branding,
     bodyHtml,
     basePath,
+    ...chrome,
   });
 }
 

@@ -23,4 +23,26 @@ In `worker.js`, import `handleKbRequest` from `@runpoint/kb`. Before the final s
 
 Add `SUPABASE_URL` and `SUPABASE_ANON_KEY` (values above) to `wrangler.jsonc`'s `vars`, hardcoded (plain vars, not `wrangler secret` — the anon key is meant to be public, RLS is what protects the data, and it's fine to commit). Same project, same values, every site.
 
-**Check:** run `wrangler dev` locally and hit `/support/` and `/support/<an-existing-published-article-slug>` — confirm a real published article for `APP_SLUG` renders as real HTML (check view-source, not just what the browser shows), with correct branding, and that every pre-existing route on this site still works unchanged. Then deploy (`npm run deploy` or equivalent) and confirm the same thing live. Publishing an edit to the article from `/app/kb` should show up on the live site within a few minutes without a redeploy.
+Add a **Support** link to the site's main navigation (and footer too, if the site has footer links) pointing to `/support/`. Match the existing nav markup and styling — do not redesign the header; just add the link in the same pattern as the other nav items. Skip only if a Support/Help link to `/support/` already exists.
+
+Make the KB pages use the **exact same nav** as the main site:
+
+1. Extract the site's nav markup and styles into shared files — typically `public/site-nav.css` (fonts, CSS variables, `.nav`, `.btn`, etc.) and a root `site-nav.js` that exports:
+   - `siteNavHtml` — the same `<nav>` HTML as the homepage (adjust in-page hash links to `/#section` so they work from `/support/*`)
+   - `siteNavCssHref` — usually `"/site-nav.css"`
+   - `siteNavScript` — any nav behavior the main page uses (e.g. sticky scroll class)
+2. Link `site-nav.css` from the homepage too, so nav stays in sync.
+3. Pass all three into `handleKbRequest`:
+
+```javascript
+import { siteNavCssHref, siteNavHtml, siteNavScript } from "./site-nav.js";
+
+const kb = await handleKbRequest(request, env, {
+  appSlug: "APP_SLUG",
+  siteNavHtml,
+  siteNavCssHref,
+  siteNavScript,
+});
+```
+
+**Check:** run `wrangler dev` locally and hit `/support/` and `/support/<an-existing-published-article-slug>` — confirm a real published article for `APP_SLUG` renders as real HTML (check view-source, not just what the browser shows), with correct branding, the same nav as the homepage, and that every pre-existing route on this site still works unchanged. Then deploy (`npm run deploy` or equivalent) and confirm the same thing live. Publishing an edit to the article from `/app/kb` should show up on the live site within a few minutes without a redeploy.
