@@ -78,6 +78,15 @@ const checks = [
   articleHtml.includes("<h1>Welcome</h1>"),
   slugHtml.includes("<h1>Beta Feature</h1>"),
   slugHtml.includes('href="../">← All articles'),
+  articleHtml.includes(
+    "Still need help? Contact us in the app: Settings → Support &amp; Feedback.",
+  ),
+  slugHtml.includes(
+    "Still need help? Contact us in the app: Settings → Support &amp; Feedback.",
+  ),
+  navArticleHtml.includes(
+    "Still need help? Contact us in the app: Settings → Support &amp; Feedback.",
+  ),
   navIndexHtml.includes('<nav id="site-nav">Site Nav</nav>'),
   navIndexHtml.includes('<link rel="stylesheet" href="/assets/site-nav.css">'),
   navIndexHtml.includes(

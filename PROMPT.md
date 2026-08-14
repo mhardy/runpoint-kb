@@ -21,6 +21,6 @@ Add `@runpoint/kb` as a dependency: `"@runpoint/kb": "github:mhardy/runpoint-kb"
 
 Add a **Support** nav link to `/OUT_DIR/` in the site's header (and footer, if it has footer links), matching existing markup/styling. Skip if one already exists.
 
-**Manual step — cannot be automated in code:** in the Cloudflare dashboard, go to this Worker's **Settings → Build** and set the **Build command** to `npm run build` (Cloudflare does not honor build config from `wrangler.jsonc`/`wrangler.toml` — this has to be set per-project in the dashboard, once). Add a line to this repo's own `README.md` documenting that this step was done and must be redone if the project is ever recreated.
+**Manual step — cannot be automated in code:** in the Cloudflare dashboard, go to **Compute → Workers & Pages**, select this Worker, click **Settings** in the top menu, and set the **Build command** to `npm run build` (Cloudflare does not honor build config from `wrangler.jsonc`/`wrangler.toml` — this has to be set per-project in the dashboard, once). Add a line to this repo's own `README.md` documenting that this step was done and must be redone if the project is ever recreated.
 
 **Check:** run the build script locally, then `wrangler dev` — confirm `/OUT_DIR/` and `/OUT_DIR/<a-real-article-slug>` render real HTML (view-source, not just what the browser shows) with nav matching if applicable, and every pre-existing route still works. Push to trigger the real Cloudflare build; check the **Builds** tab on that Worker to confirm the build command ran, then verify live.

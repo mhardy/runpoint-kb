@@ -158,7 +158,8 @@ export function renderArticlePage(article, options = {}) {
       <h1>${escapeHtml(article.title)}</h1>
       ${htmlBody}
     </article>
-    <p class="back-link"><a href="../">← All articles</a></p>`;
+    <p class="back-link"><a href="../">← All articles</a></p>
+    <p class="support-contact">Still need help? Contact us in the app: Settings → Support &amp; Feedback.</p>`;
 
   return pageShell({
     title: article.title,
